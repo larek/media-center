@@ -1,3 +1,6 @@
+import { formatTime } from '@video-player/shared'
+import { api } from '../api.js'
+
 export function AudioPlayer({
   audioRef,
   isPlaying,
@@ -9,12 +12,6 @@ export function AudioPlayer({
   seek,
   changeVolume,
 }) {
-  const formatTime = (time) => {
-    if (!time || !isFinite(time)) return '0:00'
-    const minutes = Math.floor(time / 60)
-    const seconds = Math.floor(time % 60)
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`
-  }
 
   const handleProgressClick = (e) => {
     const rect = e.currentTarget.getBoundingClientRect()
@@ -32,7 +29,7 @@ export function AudioPlayer({
     <div className="bg-[var(--bg-secondary)] rounded-xl p-4 mb-6">
       <audio
         ref={audioRef}
-        src={currentTrack ? `/api/files/stream/${encodeURIComponent(currentTrack.s3_key)}` : undefined}
+        src={currentTrack ? api.streamUrl(encodeURIComponent(currentTrack.s3_key)) : undefined}
       />
 
       <div className="flex items-center gap-4">

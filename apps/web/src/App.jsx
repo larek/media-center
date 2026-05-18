@@ -3,6 +3,7 @@ import { ThemeToggle } from './components/ThemeToggle.jsx'
 import { AudioPlayer } from './components/AudioPlayer.jsx'
 import { UploadForm } from './components/UploadForm.jsx'
 import { useAudio } from './hooks/useAudio.js'
+import { api } from './api.js'
 
 export default function App() {
   const {
@@ -28,8 +29,7 @@ export default function App() {
 
   const fetchFiles = useCallback(async () => {
     try {
-      const response = await fetch('/api/tracks/list')
-      const data = await response.json()
+      const data = await api.listTracks()
       setFiles(data)
     } catch (error) {
       console.error('Error fetching files:', error)
@@ -63,7 +63,7 @@ export default function App() {
     if (!confirm(`Delete "${track.name}"?`)) return
 
     try {
-      await fetch(`/api/tracks/delete/${track.id}`, { method: 'DELETE' })
+      await api.deleteTrack(track.id)
       if (currentTrack?.id === track.id) {
         loadTrack(null)
       }
@@ -102,18 +102,11 @@ export default function App() {
     }
 
     try {
-      const response = await fetch(`/api/tracks/update/${track.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newName, artist: newArtist || null }),
-      })
-
-      if (response.ok) {
-        if (currentTrack?.id === track.id) {
-          loadTrack({ ...currentTrack, name: newName, artist: newArtist || null })
-        }
-        fetchFiles()
+      await api.updateTrack(track.id, { name: newName, artist: newArtist })
+      if (currentTrack?.id === track.id) {
+        loadTrack({ ...currentTrack, name: newName, artist: newArtist || null })
       }
+      fetchFiles()
     } catch (error) {
       console.error('Error updating track:', error)
     }

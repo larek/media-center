@@ -1,0 +1,12 @@
+{
+  "name": "@video-player/shared",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./api": "./src/api.js",
+    "./format": "./src/format.js"
+  }
+}

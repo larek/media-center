@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { api } from '../api.js'
 
 export function UploadForm({ onUploadComplete }) {
   const [isDragging, setIsDragging] = useState(false)
@@ -99,7 +100,7 @@ export function UploadForm({ onUploadComplete }) {
         alert('Upload failed')
       })
 
-      xhr.open('POST', '/api/files/upload')
+      xhr.open('POST', api.uploadEndpoint())
       xhr.send(formData)
     } catch (error) {
       console.error('Upload error:', error)
@@ -115,7 +116,7 @@ export function UploadForm({ onUploadComplete }) {
       serverProgress: 100,
     }))
 
-    const eventSource = new EventSource(`/api/files/upload-progress/${uploadId}`)
+    const eventSource = new EventSource(api.uploadProgressUrl(uploadId))
     eventSourceRef.current = eventSource
 
     eventSource.onmessage = (event) => {

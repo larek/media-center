@@ -1,1 +1,9 @@
-onlyBuiltDependencies: '[''esbuild'']'
+packages:
+  - apps/*
+  - packages/*
+
+onlyBuiltDependencies:
+  - esbuild
+
+patchedDependencies:
+  react-native-track-player@4.1.2: patches/react-native-track-player@4.1.2.patch
