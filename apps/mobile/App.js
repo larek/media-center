@@ -11,14 +11,15 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import TrackPlayer, { Event } from 'react-native-track-player'
 import { api } from './src/api'
+import { useDownloads } from './src/downloads'
 import { Player } from './src/Player'
 import { Settings } from './src/Settings'
 import { useTheme } from './src/theme'
 import { TrackList } from './src/TrackList'
 import { setupPlayerOnce, tracksToRntpQueue } from './src/trackPlayer'
 
-function tracksSignature(list) {
-  return list.map((t) => `${t.id}:${t.s3_key}`).join('|')
+function tracksSignature(list, getLocalUri) {
+  return list.map((t) => `${t.id}:${getLocalUri(t.id) ? 'L' : 'R'}`).join('|')
 }
 
 function filterTracks(tracks, query) {
@@ -34,6 +35,7 @@ function filterTracks(tracks, query) {
 export default function App() {
   const insets = useSafeAreaInsets()
   const { palette } = useTheme()
+  const { getLocalUri } = useDownloads()
   const [tracks, setTracks] = useState([])
   const [loading, setLoading] = useState(true)
   const [currentTrackId, setCurrentTrackId] = useState(null)
@@ -74,9 +76,9 @@ export default function App() {
 
   async function ensureQueueSynced() {
     await setupPlayerOnce()
-    const signature = tracksSignature(tracks)
+    const signature = tracksSignature(tracks, getLocalUri)
     if (queueSignatureRef.current === signature) return
-    const queue = tracksToRntpQueue(tracks, api.streamUrl)
+    const queue = tracksToRntpQueue(tracks, api.streamUrl, getLocalUri)
     await TrackPlayer.reset()
     await TrackPlayer.add(queue)
     queueSignatureRef.current = signature

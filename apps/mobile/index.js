@@ -3,13 +3,16 @@ import { SafeAreaProvider } from 'react-native-safe-area-context'
 import TrackPlayer from 'react-native-track-player'
 
 import App from './App'
+import { DownloadsProvider } from './src/downloads'
 import { ThemeProvider } from './src/theme'
 
 function Root() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <App />
+        <DownloadsProvider>
+          <App />
+        </DownloadsProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   )

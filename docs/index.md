@@ -26,11 +26,14 @@ video-player/                # pnpm workspace
 │       ├── src/
 │       │   ├── api.js
 │       │   ├── Player.js              # UI плеера на хуках RNTP, прижат к нижнему insets
-│       │   ├── TrackList.js           # FlatList треков, Spotify-стилистика
-│       │   ├── trackPlayer.js         # setupPlayerOnce + capabilities
+│       │   ├── TrackList.js           # FlatList треков + кнопка download/прогресс/удалить
+│       │   ├── Settings.js            # Apple-style settings modal (theme + scheme)
+│       │   ├── theme.js               # ThemeProvider + 6 schemes × 2 modes (light/dark)
+│       │   ├── downloads.js           # DownloadsProvider — createDownloadResumable + сканер локальной папки
+│       │   ├── trackPlayer.js         # setupPlayerOnce + capabilities + url = local || stream
 │       │   └── trackPlayerService.js  # remote-обработчики локскрина
-│       ├── App.js                     # оркестрация + search input + safe-area insets
-│       ├── index.js                   # SafeAreaProvider + registerRootComponent + registerPlaybackService
+│       ├── App.js                     # оркестрация + search input + safe-area insets + settings
+│       ├── index.js                   # SafeAreaProvider + ThemeProvider + DownloadsProvider + registerRootComponent + registerPlaybackService
 │       ├── app.json
 │       ├── eas.json                   # профили development / preview / production
 │       ├── .env                       # EXPO_PUBLIC_API_URL для dev-client
@@ -86,10 +89,40 @@ RNTP содержит нативный код, которого нет в Expo G
 
 ### UI и навигация
 
-- Стилистика Spotify: фон `#121212`, карточки `#181818`, акцент `#1DB954`, белая круглая кнопка Play.
-- Плеер прижат к нижней части экрана, список треков — над ним.
+- Базовая стилистика — Spotify, но цвета берутся из активной палитры темы (см. ниже).
+- Плеер прижат к нижней части экрана, список треков — над ним, ⚙ в правом верхнем углу открывает settings modal.
 - Поиск: `TextInput` сверху списка, instant-фильтр по `name + artist` через `useMemo` (client-side, без бэкенд-запросов). При росте библиотеки до ~5k треков можно оставить как есть, дальше нужен серверный поиск с пагинацией.
-- Приложение только воспроизводит треки — загрузка и удаление сделаны на web.
+- Приложение только воспроизводит треки — загрузка и удаление на бэкенд сделаны на web.
+
+### Темизация
+
+- `src/theme.js` — `ThemeProvider` (state: `mode` ∈ `light|dark`, `scheme` ∈ 6 вариантов) + `useTheme()` хук возвращает текущую `palette`.
+- Schemes: `default` (Spotify), `gruvbox`, `oneDark`, `dracula` (light = Alucard), `tokyoNight`, `nord`. Каждая схема имеет полную палитру для обоих режимов (12 палитр).
+- Каждая палитра содержит: `bg`, `bgElevated`, `bgInput`, `bgChip`, `border`, `text`, `textMuted`, `accent`, `accentText`, `playButton`, `playIcon`, `progressTrack`, `progressFill`, `artwork`, `artworkIcon`, `statusBarStyle`.
+- Все компоненты (`App`, `TrackList`, `Player`, `Settings`) подтягивают цвета из `useTheme().palette` — переключение схемы/режима перекрашивает UI мгновенно.
+- Хранение: in-memory React state (без AsyncStorage) — настройки сбрасываются на defaults при перезапуске приложения. Для persistence нужен `@react-native-async-storage/async-storage` (нативная либа → ребилд APK).
+
+### Settings (Apple-style)
+
+- `src/Settings.js` — `Modal` с `animationType="slide"`, открывается по тапу на ⚙.
+- Nav-bar: `Done` слева (accent color), `Settings` по центру, разделитель `StyleSheet.hairlineWidth`.
+- Группы: `borderRadius: 12`, `marginHorizontal: 16`, фон = `palette.bgElevated`, сепараторы между строк `marginLeft: 16` (классический iOS pattern).
+- Section labels: uppercase, `letterSpacing: 0.5`, серый, отступ 32px слева.
+- **THEME** блок: `Switch` "Dark mode" — `value={mode === 'dark'}`, `trackColor.true = accent`.
+- **SCHEME** блок: 6 радио-строк с iOS-style preview-плиткой 36×36 (`borderRadius: 8`) — мини-мокап трек-роу (bg фон + accent точка + text/textMuted полоски). Активная строка отмечена чекмарком, нарисованным двумя `View`-полосками под углами 45°/-45° (геометрия выведена так, чтобы оба отрезка сходились ровно в точке (8, 17) в системе 24×24).
+- **STORAGE** блок: `Downloaded` (count + размер, например `12 tracks · 87 MB`), `Device free` (`FileSystem.getFreeDiskStorageAsync` + `getTotalDiskCapacityAsync` → `X / Y GB`, перезапрос при открытии modal и при изменении `totalSize`), `Clear all downloads` (красная кнопка, `disabled` при пустоте, `Alert.alert` подтверждение перед удалением).
+
+### Загрузка треков (offline-режим)
+
+- `src/downloads.js` — `DownloadsProvider` + `useDownloads()` хук. Контекст экспортирует: `downloads`, `download`, `cancelDownload`, `deleteDownload`, `getLocalUri`, `clearAll`, `totalSize`, `downloadedCount`.
+- Хранилище: `${FileSystem.documentDirectory}tracks/{trackId}.{ext}` (app-private storage, файлы не видны другим приложениям).
+- При маунте провайдер сканит папку, на каждый файл зовёт `getInfoAsync` и сохраняет `{status: 'done', uri, size}` (источник истины — файловая система, не отдельный индекс).
+- Скачивание: `expo-file-system/legacy` → `createDownloadResumable` с progress callback. Прогресс **throttled**: setState срабатывает не чаще раз в 120мс **и** только при изменении ≥1% (финальный 100% всегда проходит). Для корректного прогресса бэкенд должен отдавать `Content-Length` header.
+- Состояния трека в UI (`TrackList`): `idle` → серая иконка ↓; `downloading` → процент accent-цветом + анимированная заливка всей строки слева направо (subtle accent с alpha `22`); `done` → круглая accent-кнопка с белым ↓ (тап = подтверждение удаления); `error` → красный `!` (тап = повтор).
+- Анимация заливки: `Animated.Value` + комбинация `translateX` и `scaleX` (rotation pivot выведен математически вместо `transformOrigin`, который ломается на Android с native driver). Обе трансформации поддерживают `useNativeDriver: true` → 60fps на нативном потоке.
+- При воспроизведении: `tracksToRntpQueue(tracks, streamUrl, getLocalUri)` подставляет локальный `file://` URI вместо стрима, если файл скачан.
+- Сигнатура очереди в `App.js` включает `L|R` маркер для каждого трека — при изменении статуса скачивания очередь пересобирается на следующем `handleSelect`. Скачивание текущего играющего трека на лету источник не меняет (нужен ещё один select).
+- Cancel: `resumable.pauseAsync()` + удаление частичного файла. Delete: `FileSystem.deleteAsync()`. ClearAll: останавливает все активные `resumable`'ы, удаляет всю папку `tracks/` и пересоздаёт её пустой.
 
 ### Safe area (Android edge-to-edge)
 

@@ -47,10 +47,10 @@ export function setupPlayerOnce() {
   return setupPromise
 }
 
-export function tracksToRntpQueue(tracks, streamUrl) {
+export function tracksToRntpQueue(tracks, streamUrl, getLocalUri) {
   return tracks.map((t) => ({
     id: String(t.id),
-    url: streamUrl(encodeURIComponent(t.s3_key)),
+    url: getLocalUri?.(t.id) || streamUrl(encodeURIComponent(t.s3_key)),
     title: t.name,
     artist: t.artist || 'Unknown',
   }))

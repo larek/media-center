@@ -1,4 +1,5 @@
 import {
+  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -8,12 +9,60 @@ import {
   Text,
   View,
 } from 'react-native'
+import { useEffect, useState } from 'react'
+import * as FileSystem from 'expo-file-system/legacy'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useDownloads } from './downloads'
 import { getSchemePalette, SCHEMES, useTheme } from './theme'
+
+function formatBytes(bytes) {
+  if (!bytes) return '0 B'
+  const units = ['B', 'KB', 'MB', 'GB']
+  let i = 0
+  let n = bytes
+  while (n >= 1024 && i < units.length - 1) {
+    n /= 1024
+    i++
+  }
+  return `${n.toFixed(n >= 10 || i === 0 ? 0 : 1)} ${units[i]}`
+}
 
 export function Settings({ visible, onClose }) {
   const insets = useSafeAreaInsets()
   const { palette, mode, scheme, toggleMode, setScheme } = useTheme()
+  const { totalSize, clearAll, downloadedCount } = useDownloads()
+  const [disk, setDisk] = useState({ free: null, total: null })
+
+  useEffect(() => {
+    if (!visible) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const [free, total] = await Promise.all([
+          FileSystem.getFreeDiskStorageAsync(),
+          FileSystem.getTotalDiskCapacityAsync(),
+        ])
+        if (!cancelled) setDisk({ free, total })
+      } catch (e) {
+        console.warn('disk info failed', e)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [visible, totalSize])
+
+  function confirmClearAll() {
+    if (totalSize === 0) return
+    Alert.alert(
+      'Clear all downloads?',
+      `${formatBytes(totalSize)} will be removed from this device. Tracks will still be available for streaming.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Clear', style: 'destructive', onPress: clearAll },
+      ]
+    )
+  }
 
   function renderSwatch(schemeId) {
     const p = getSchemePalette(schemeId, mode)
@@ -112,6 +161,53 @@ export function Settings({ visible, onClose }) {
               </View>
             ))}
           </Group>
+
+          <SectionLabel palette={palette}>Storage</SectionLabel>
+          <Group palette={palette}>
+            <Row>
+              <Text style={[styles.rowLabel, { color: palette.text }]}>
+                Downloaded
+              </Text>
+              <Text style={[styles.rowValue, { color: palette.textMuted }]}>
+                {downloadedCount} {downloadedCount === 1 ? 'track' : 'tracks'} ·{' '}
+                {formatBytes(totalSize)}
+              </Text>
+            </Row>
+            <View
+              style={[styles.separator, { backgroundColor: palette.border }]}
+            />
+            <Row>
+              <Text style={[styles.rowLabel, { color: palette.text }]}>
+                Device free
+              </Text>
+              <Text style={[styles.rowValue, { color: palette.textMuted }]}>
+                {disk.free != null && disk.total != null
+                  ? `${formatBytes(disk.free)} / ${formatBytes(disk.total)}`
+                  : '—'}
+              </Text>
+            </Row>
+            <View
+              style={[styles.separator, { backgroundColor: palette.border }]}
+            />
+            <Pressable
+              onPress={confirmClearAll}
+              android_ripple={{ color: palette.border }}
+              disabled={totalSize === 0}
+            >
+              <Row>
+                <Text
+                  style={[
+                    styles.rowLabel,
+                    {
+                      color: totalSize === 0 ? palette.textMuted : '#E03131',
+                    },
+                  ]}
+                >
+                  Clear all downloads
+                </Text>
+              </Row>
+            </Pressable>
+          </Group>
         </ScrollView>
       </View>
     </Modal>
@@ -202,6 +298,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
   },
   rowLabel: { fontSize: 17, fontWeight: '400' },
+  rowValue: { fontSize: 17, fontWeight: '400' },
   separator: {
     height: StyleSheet.hairlineWidth,
     marginLeft: 16,
