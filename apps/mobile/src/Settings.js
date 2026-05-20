@@ -15,25 +15,26 @@ export function Settings({ visible, onClose }) {
   const insets = useSafeAreaInsets()
   const { palette, mode, scheme, toggleMode, setScheme } = useTheme()
 
-  function renderSwatches(schemeId) {
+  function renderSwatch(schemeId) {
     const p = getSchemePalette(schemeId, mode)
-    const colors = [p.bg, p.bgElevated, p.accent, p.text]
     return (
-      <View style={styles.swatchRow}>
-        {colors.map((c, idx) => (
-          <View
-            key={idx}
-            style={[
-              styles.swatch,
-              {
-                backgroundColor: c,
-                borderColor: palette.border,
-                marginLeft: idx === 0 ? 0 : -6,
-                zIndex: colors.length - idx,
-              },
-            ]}
-          />
-        ))}
+      <View
+        style={[
+          styles.swatch,
+          { backgroundColor: p.bg, borderColor: palette.border },
+        ]}
+      >
+        <View
+          style={[styles.swatchAccent, { backgroundColor: p.accent }]}
+        />
+        <View style={[styles.swatchLine, { backgroundColor: p.text }]} />
+        <View
+          style={[
+            styles.swatchLine,
+            styles.swatchLineShort,
+            { backgroundColor: p.textMuted },
+          ]}
+        />
       </View>
     )
   }
@@ -100,18 +101,12 @@ export function Settings({ visible, onClose }) {
                 >
                   <Row>
                     <View style={styles.schemeLeft}>
-                      {renderSwatches(s.id)}
+                      {renderSwatch(s.id)}
                       <Text style={[styles.rowLabel, { color: palette.text }]}>
                         {s.label}
                       </Text>
                     </View>
-                    {scheme === s.id ? (
-                      <Text
-                        style={[styles.check, { color: palette.accent }]}
-                      >
-                        ✓
-                      </Text>
-                    ) : null}
+                    {scheme === s.id ? <Check color={palette.accent} /> : null}
                   </Row>
                 </Pressable>
               </View>
@@ -141,6 +136,35 @@ function Group({ children, palette }) {
 
 function Row({ children }) {
   return <View style={styles.row}>{children}</View>
+}
+
+function Check({ color, size = 18, thickness = 2 }) {
+  return (
+    <View style={{ width: size, height: size }}>
+      <View
+        style={{
+          position: 'absolute',
+          left: size * 0.132,
+          top: size * 0.583,
+          width: size * 0.236,
+          height: thickness,
+          backgroundColor: color,
+          transform: [{ rotate: '45deg' }],
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          left: size * 0.230,
+          top: size * 0.417,
+          width: size * 0.707,
+          height: thickness,
+          backgroundColor: color,
+          transform: [{ rotate: '-45deg' }],
+        }}
+      />
+    </View>
+  )
 }
 
 const styles = StyleSheet.create({
@@ -182,13 +206,26 @@ const styles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
     marginLeft: 16,
   },
-  check: { fontSize: 20, fontWeight: '600' },
   schemeLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  swatchRow: { flexDirection: 'row', marginRight: 12 },
   swatch: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    width: 36,
+    height: 36,
+    borderRadius: 8,
     borderWidth: StyleSheet.hairlineWidth,
+    marginRight: 14,
+    padding: 6,
+    justifyContent: 'flex-end',
   },
+  swatchAccent: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginBottom: 4,
+  },
+  swatchLine: {
+    height: 2,
+    borderRadius: 1,
+    marginTop: 2,
+  },
+  swatchLineShort: { width: '60%' },
 })
