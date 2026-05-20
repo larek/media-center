@@ -22,16 +22,15 @@ video-player/                # pnpm workspace
 │   │   ├── index.html
 │   │   ├── vite.config.js
 │   │   └── package.json
-│   └── mobile/              # React Native (Expo SDK 54)
+│   └── mobile/              # React Native (Expo SDK 54) — только воспроизведение
 │       ├── src/
 │       │   ├── api.js
-│       │   ├── Player.js              # UI плеера на хуках RNTP
-│       │   ├── TrackList.js
-│       │   ├── UploadButton.js
+│       │   ├── Player.js              # UI плеера на хуках RNTP, прижат к нижнему insets
+│       │   ├── TrackList.js           # FlatList треков, Spotify-стилистика
 │       │   ├── trackPlayer.js         # setupPlayerOnce + capabilities
 │       │   └── trackPlayerService.js  # remote-обработчики локскрина
-│       ├── App.js
-│       ├── index.js                   # registerRootComponent + registerPlaybackService
+│       ├── App.js                     # оркестрация + search input + safe-area insets
+│       ├── index.js                   # SafeAreaProvider + registerRootComponent + registerPlaybackService
 │       ├── app.json
 │       ├── eas.json                   # профили development / preview / production
 │       ├── .env                       # EXPO_PUBLIC_API_URL для dev-client
@@ -84,6 +83,19 @@ RNTP содержит нативный код, которого нет в Expo G
 - `src/trackPlayerService.js` — playback-service, регистрируется в `index.js` через `TrackPlayer.registerPlaybackService`. Слушает remote-события (нажатия с локскрина / шторки / наушников) и проксирует их в TrackPlayer.
 - `App.js` — собирает очередь треков из `/api/tracks/list`, при выборе трека делает `reset → add → skip(index) → play`. Подписан на `Event.PlaybackActiveTrackChanged` чтобы подсветка трека в списке синхронизировалась с кнопками next/prev на локскрине.
 - `Player.js` — UI на хуках `useActiveTrack`, `usePlaybackState`, `useProgress`.
+
+### UI и навигация
+
+- Стилистика Spotify: фон `#121212`, карточки `#181818`, акцент `#1DB954`, белая круглая кнопка Play.
+- Плеер прижат к нижней части экрана, список треков — над ним.
+- Поиск: `TextInput` сверху списка, instant-фильтр по `name + artist` через `useMemo` (client-side, без бэкенд-запросов). При росте библиотеки до ~5k треков можно оставить как есть, дальше нужен серверный поиск с пагинацией.
+- Приложение только воспроизводит треки — загрузка и удаление сделаны на web.
+
+### Safe area (Android edge-to-edge)
+
+- `app.json` → `android.edgeToEdgeEnabled: true` — приложение рисуется под статус-баром и нав-баром.
+- `react-native-safe-area-context` (~5.6.2) — `SafeAreaProvider` в `index.js` оборачивает `App`, в `App.js` через `useSafeAreaInsets()` берутся точные `insets.top` и `insets.bottom` (работает для жестового и 3-кнопочного навигаторов, складных, вырезов).
+- `StatusBar` сделан прозрачным + `translucent`, верхний инсет залит цветом фона `#121212`, нижний инсет пробрасывается в `Player` как `paddingBottom`.
 
 ### Особенности конфигурации
 

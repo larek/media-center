@@ -1,16 +1,41 @@
-import { useCallback, useEffect, useState } from 'react'
-import { Alert, SafeAreaView, StatusBar, StyleSheet, Text, View } from 'react-native'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  Alert,
+  Pressable,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import TrackPlayer, { Event } from 'react-native-track-player'
 import { api } from './src/api'
 import { Player } from './src/Player'
 import { TrackList } from './src/TrackList'
-import { UploadButton } from './src/UploadButton'
 import { setupPlayerOnce, tracksToRntpQueue } from './src/trackPlayer'
 
+function tracksSignature(list) {
+  return list.map((t) => `${t.id}:${t.s3_key}`).join('|')
+}
+
+function filterTracks(tracks, query) {
+  const q = query.trim().toLowerCase()
+  if (!q) return tracks
+  return tracks.filter(
+    (t) =>
+      t.name.toLowerCase().includes(q) ||
+      (t.artist || '').toLowerCase().includes(q)
+  )
+}
+
 export default function App() {
+  const insets = useSafeAreaInsets()
   const [tracks, setTracks] = useState([])
   const [loading, setLoading] = useState(true)
   const [currentTrackId, setCurrentTrackId] = useState(null)
+  const [search, setSearch] = useState('')
+  const queueSignatureRef = useRef(null)
 
   useEffect(() => {
     setupPlayerOnce().catch((e) => console.warn('TrackPlayer setup failed', e))
@@ -31,6 +56,7 @@ export default function App() {
     try {
       const data = await api.listTracks()
       setTracks(data)
+      queueSignatureRef.current = null
     } catch (e) {
       Alert.alert('Failed to load tracks', String(e?.message ?? e))
     } finally {
@@ -42,14 +68,21 @@ export default function App() {
     fetchTracks()
   }, [fetchTracks])
 
+  async function ensureQueueSynced() {
+    await setupPlayerOnce()
+    const signature = tracksSignature(tracks)
+    if (queueSignatureRef.current === signature) return
+    const queue = tracksToRntpQueue(tracks, api.streamUrl)
+    await TrackPlayer.reset()
+    await TrackPlayer.add(queue)
+    queueSignatureRef.current = signature
+  }
+
   async function handleSelect(track) {
     try {
-      await setupPlayerOnce()
+      await ensureQueueSynced()
       const index = tracks.findIndex((t) => t.id === track.id)
       if (index < 0) return
-      const queue = tracksToRntpQueue(tracks, api.streamUrl)
-      await TrackPlayer.reset()
-      await TrackPlayer.add(queue)
       await TrackPlayer.skip(index)
       await TrackPlayer.play()
       setCurrentTrackId(track.id)
@@ -58,53 +91,91 @@ export default function App() {
     }
   }
 
-  async function handleDelete(track) {
-    try {
-      await api.deleteTrack(track.id)
-      if (currentTrackId === track.id) {
-        await TrackPlayer.reset()
-        setCurrentTrackId(null)
-      }
-      fetchTracks()
-    } catch (e) {
-      Alert.alert('Delete failed', String(e?.message ?? e))
-    }
-  }
+  const filteredTracks = useMemo(
+    () => filterTracks(tracks, search),
+    [tracks, search]
+  )
 
   const currentTrack = tracks.find((t) => t.id === currentTrackId) || null
 
   return (
-    <SafeAreaView style={styles.root}>
-      <StatusBar barStyle="light-content" backgroundColor="#0e1621" />
+    <View style={styles.root}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor="transparent"
+        translucent
+      />
+      <View style={[styles.topInset, { height: insets.top }]} />
+
       <View style={styles.header}>
-        <Text style={styles.headerText}>Audio Player</Text>
+        <Text style={styles.headerText}>Your Library</Text>
       </View>
 
-      <Player />
-      <UploadButton onUploaded={fetchTracks} />
+      <View style={styles.searchWrap}>
+        <Text style={styles.searchIcon}>⌕</Text>
+        <TextInput
+          style={styles.search}
+          placeholder="Search songs and artists"
+          placeholderTextColor="#B3B3B3"
+          value={search}
+          onChangeText={setSearch}
+          autoCorrect={false}
+          autoCapitalize="none"
+        />
+        {search ? (
+          <Pressable
+            onPress={() => setSearch('')}
+            hitSlop={8}
+            style={styles.searchClear}
+          >
+            <Text style={styles.searchClearText}>×</Text>
+          </Pressable>
+        ) : null}
+      </View>
 
       {loading ? (
         <Text style={styles.loading}>Loading…</Text>
       ) : (
         <TrackList
-          tracks={tracks}
+          tracks={filteredTracks}
           currentTrack={currentTrack}
           onSelect={handleSelect}
-          onDelete={handleDelete}
         />
       )}
-    </SafeAreaView>
+
+      <Player bottomInset={insets.bottom} />
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#17212b' },
+  root: { flex: 1, backgroundColor: '#121212' },
+  topInset: { backgroundColor: '#121212' },
   header: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingTop: 12,
-    paddingBottom: 8,
-    backgroundColor: '#0e1621',
+    paddingBottom: 12,
+    backgroundColor: '#121212',
   },
-  headerText: { color: '#f3f4f6', fontSize: 20, fontWeight: '700' },
-  loading: { color: '#9ca3af', textAlign: 'center', marginTop: 32 },
+  headerText: {
+    color: '#FFFFFF',
+    fontSize: 26,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
+  searchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginBottom: 12,
+    paddingHorizontal: 12,
+    height: 40,
+    borderRadius: 4,
+    backgroundColor: '#242424',
+  },
+  searchIcon: { color: '#B3B3B3', fontSize: 18, marginRight: 8 },
+  search: { flex: 1, color: '#FFFFFF', fontSize: 15, paddingVertical: 0 },
+  searchClear: { paddingHorizontal: 6 },
+  searchClearText: { color: '#B3B3B3', fontSize: 22, lineHeight: 24 },
+  loading: { color: '#B3B3B3', textAlign: 'center', marginTop: 32 },
 })

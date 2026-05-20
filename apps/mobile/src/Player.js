@@ -7,7 +7,7 @@ import TrackPlayer, {
 } from 'react-native-track-player'
 import { formatTime } from '@video-player/shared'
 
-export function Player() {
+export function Player({ bottomInset = 0 }) {
   const playbackState = usePlaybackState()
   const { position, duration } = useProgress()
   const activeTrack = useActiveTrack()
@@ -17,15 +17,22 @@ export function Player() {
   const progress = duration > 0 ? Math.min(position / duration, 1) : 0
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title} numberOfLines={1}>
-        {activeTrack?.title || 'No track selected'}
-      </Text>
-      {activeTrack?.artist ? (
-        <Text style={styles.artist} numberOfLines={1}>
-          {activeTrack.artist}
-        </Text>
-      ) : null}
+    <View style={[styles.container, { paddingBottom: 18 + bottomInset }]}>
+      <View style={styles.row}>
+        <View style={styles.artwork}>
+          <Text style={styles.artworkIcon}>♪</Text>
+        </View>
+        <View style={styles.info}>
+          <Text style={styles.title} numberOfLines={1}>
+            {activeTrack?.title || 'No track selected'}
+          </Text>
+          {activeTrack?.artist ? (
+            <Text style={styles.artist} numberOfLines={1}>
+              {activeTrack.artist}
+            </Text>
+          ) : null}
+        </View>
+      </View>
 
       <View style={styles.progressBar}>
         <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
@@ -66,33 +73,47 @@ export function Player() {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#0e1621',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1f2a37',
+    backgroundColor: '#181818',
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 18,
+    borderTopWidth: 1,
+    borderTopColor: '#282828',
   },
-  title: { color: '#f3f4f6', fontSize: 16, fontWeight: '600' },
-  artist: { color: '#9ca3af', fontSize: 13, marginTop: 2 },
+  row: { flexDirection: 'row', alignItems: 'center' },
+  artwork: {
+    width: 48,
+    height: 48,
+    borderRadius: 4,
+    backgroundColor: '#282828',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  artworkIcon: { color: '#1DB954', fontSize: 22, fontWeight: '700' },
+  info: { flex: 1, minWidth: 0 },
+  title: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
+  artist: { color: '#B3B3B3', fontSize: 12, marginTop: 2 },
   progressBar: {
-    height: 4,
-    backgroundColor: '#1f2a37',
-    borderRadius: 2,
+    height: 3,
+    backgroundColor: '#4D4D4D',
+    borderRadius: 1.5,
     overflow: 'hidden',
-    marginTop: 14,
+    marginTop: 16,
   },
-  progressFill: { height: '100%', backgroundColor: '#3b82f6' },
+  progressFill: { height: '100%', backgroundColor: '#FFFFFF' },
   timeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 6,
   },
-  time: { color: '#9ca3af', fontSize: 12 },
+  time: { color: '#B3B3B3', fontSize: 11 },
   controlsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 24,
-    marginTop: 12,
+    gap: 32,
+    marginTop: 14,
   },
   sideButton: {
     width: 44,
@@ -100,16 +121,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sideIcon: { color: '#f3f4f6', fontSize: 22 },
-  disabled: { opacity: 0.4 },
+  sideIcon: { color: '#FFFFFF', fontSize: 24 },
+  disabled: { opacity: 0.3 },
   playButton: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  playButtonDisabled: { backgroundColor: '#374151' },
-  playIcon: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+  playButtonDisabled: { backgroundColor: '#535353' },
+  playIcon: { color: '#000000', fontSize: 18, fontWeight: '900' },
 })
