@@ -12,6 +12,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import TrackPlayer, { Event } from 'react-native-track-player'
 import { api } from './src/api'
 import { Player } from './src/Player'
+import { Settings } from './src/Settings'
+import { useTheme } from './src/theme'
 import { TrackList } from './src/TrackList'
 import { setupPlayerOnce, tracksToRntpQueue } from './src/trackPlayer'
 
@@ -31,10 +33,12 @@ function filterTracks(tracks, query) {
 
 export default function App() {
   const insets = useSafeAreaInsets()
+  const { palette } = useTheme()
   const [tracks, setTracks] = useState([])
   const [loading, setLoading] = useState(true)
   const [currentTrackId, setCurrentTrackId] = useState(null)
   const [search, setSearch] = useState('')
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const queueSignatureRef = useRef(null)
 
   useEffect(() => {
@@ -99,24 +103,33 @@ export default function App() {
   const currentTrack = tracks.find((t) => t.id === currentTrackId) || null
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: palette.bg }]}>
       <StatusBar
-        barStyle="light-content"
+        barStyle={palette.statusBarStyle}
         backgroundColor="transparent"
         translucent
       />
-      <View style={[styles.topInset, { height: insets.top }]} />
+      <View style={{ height: insets.top, backgroundColor: palette.bg }} />
 
-      <View style={styles.header}>
-        <Text style={styles.headerText}>Your Library</Text>
+      <View style={[styles.header, { backgroundColor: palette.bg }]}>
+        <Text style={[styles.headerText, { color: palette.text }]}>
+          Your Library
+        </Text>
+        <Pressable
+          onPress={() => setSettingsOpen(true)}
+          hitSlop={8}
+          style={styles.gearButton}
+        >
+          <Text style={[styles.gear, { color: palette.text }]}>⚙</Text>
+        </Pressable>
       </View>
 
-      <View style={styles.searchWrap}>
-        <Text style={styles.searchIcon}>⌕</Text>
+      <View style={[styles.searchWrap, { backgroundColor: palette.bgInput }]}>
+        <Text style={[styles.searchIcon, { color: palette.textMuted }]}>⌕</Text>
         <TextInput
-          style={styles.search}
+          style={[styles.search, { color: palette.text }]}
           placeholder="Search songs and artists"
-          placeholderTextColor="#B3B3B3"
+          placeholderTextColor={palette.textMuted}
           value={search}
           onChangeText={setSearch}
           autoCorrect={false}
@@ -128,13 +141,17 @@ export default function App() {
             hitSlop={8}
             style={styles.searchClear}
           >
-            <Text style={styles.searchClearText}>×</Text>
+            <Text style={[styles.searchClearText, { color: palette.textMuted }]}>
+              ×
+            </Text>
           </Pressable>
         ) : null}
       </View>
 
       {loading ? (
-        <Text style={styles.loading}>Loading…</Text>
+        <Text style={[styles.loading, { color: palette.textMuted }]}>
+          Loading…
+        </Text>
       ) : (
         <TrackList
           tracks={filteredTracks}
@@ -144,25 +161,32 @@ export default function App() {
       )}
 
       <Player bottomInset={insets.bottom} />
+
+      <Settings
+        visible={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+      />
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#121212' },
-  topInset: { backgroundColor: '#121212' },
+  root: { flex: 1 },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 12,
-    backgroundColor: '#121212',
   },
   headerText: {
-    color: '#FFFFFF',
     fontSize: 26,
     fontWeight: '800',
     letterSpacing: -0.5,
   },
+  gearButton: { padding: 4 },
+  gear: { fontSize: 24 },
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -171,11 +195,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 40,
     borderRadius: 4,
-    backgroundColor: '#242424',
   },
-  searchIcon: { color: '#B3B3B3', fontSize: 18, marginRight: 8 },
-  search: { flex: 1, color: '#FFFFFF', fontSize: 15, paddingVertical: 0 },
+  searchIcon: { fontSize: 18, marginRight: 8 },
+  search: { flex: 1, fontSize: 15, paddingVertical: 0 },
   searchClear: { paddingHorizontal: 6 },
-  searchClearText: { color: '#B3B3B3', fontSize: 22, lineHeight: 24 },
-  loading: { color: '#B3B3B3', textAlign: 'center', marginTop: 32 },
+  searchClearText: { fontSize: 22, lineHeight: 24 },
+  loading: { textAlign: 'center', marginTop: 32 },
 })

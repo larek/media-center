@@ -3,11 +3,14 @@ import { SafeAreaProvider } from 'react-native-safe-area-context'
 import TrackPlayer from 'react-native-track-player'
 
 import App from './App'
+import { ThemeProvider } from './src/theme'
 
 function Root() {
   return (
     <SafeAreaProvider>
-      <App />
+      <ThemeProvider>
+        <App />
+      </ThemeProvider>
     </SafeAreaProvider>
   )
 }
