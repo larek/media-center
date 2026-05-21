@@ -53,5 +53,6 @@ export function tracksToRntpQueue(tracks, streamUrl, getLocalUri) {
     url: getLocalUri?.(t.id) || streamUrl(encodeURIComponent(t.s3_key)),
     title: t.name,
     artist: t.artist || 'Unknown',
+    album: t.album || undefined,
   }))
 }

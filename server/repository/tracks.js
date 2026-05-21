@@ -2,9 +2,10 @@ import pool from '../db/index.js'
 
 export async function getAllTracks() {
   const result = await pool.query(`
-    SELECT t.*, a.name as artist
+    SELECT t.*, a.name as artist, al.name as album, al.year as album_year
     FROM tracks t
     LEFT JOIN artists a ON t.artist_id = a.id
+    LEFT JOIN albums al ON t.album_id = al.id
     ORDER BY t.created_at DESC
   `)
   return result.rows
@@ -12,9 +13,10 @@ export async function getAllTracks() {
 
 export async function getTrackById(id) {
   const result = await pool.query(`
-    SELECT t.*, a.name as artist
+    SELECT t.*, a.name as artist, al.name as album, al.year as album_year
     FROM tracks t
     LEFT JOIN artists a ON t.artist_id = a.id
+    LEFT JOIN albums al ON t.album_id = al.id
     WHERE t.id = $1
   `, [id])
   return result.rows[0] || null

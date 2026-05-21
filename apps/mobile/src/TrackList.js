@@ -76,12 +76,12 @@ export function TrackList({ tracks, currentTrack, onSelect }) {
               >
                 {item.name}
               </Text>
-              {item.artist ? (
+              {item.artist || item.album ? (
                 <Text
                   style={[styles.artist, { color: palette.textMuted }]}
                   numberOfLines={1}
                 >
-                  {item.artist}
+                  {[item.artist, item.album].filter(Boolean).join(' · ')}
                 </Text>
               ) : null}
             </View>

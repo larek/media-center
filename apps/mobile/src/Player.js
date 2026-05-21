@@ -40,12 +40,14 @@ export function Player({ bottomInset = 0 }) {
           >
             {activeTrack?.title || 'No track selected'}
           </Text>
-          {activeTrack?.artist ? (
+          {activeTrack?.artist || activeTrack?.album ? (
             <Text
               style={[styles.artist, { color: palette.textMuted }]}
               numberOfLines={1}
             >
-              {activeTrack.artist}
+              {[activeTrack?.artist, activeTrack?.album]
+                .filter(Boolean)
+                .join(' · ')}
             </Text>
           ) : null}
         </View>
