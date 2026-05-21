@@ -1,4 +1,6 @@
+import 'react-native-gesture-handler'
 import { registerRootComponent } from 'expo'
+import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import TrackPlayer from 'react-native-track-player'
 
@@ -8,13 +10,15 @@ import { ThemeProvider } from './src/theme'
 
 function Root() {
   return (
-    <SafeAreaProvider>
-      <ThemeProvider>
-        <DownloadsProvider>
-          <App />
-        </DownloadsProvider>
-      </ThemeProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <DownloadsProvider>
+            <App />
+          </DownloadsProvider>
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   )
 }
 

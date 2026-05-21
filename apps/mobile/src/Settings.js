@@ -1,6 +1,5 @@
 import {
   Alert,
-  Modal,
   Pressable,
   ScrollView,
   StatusBar,
@@ -11,6 +10,7 @@ import {
 } from 'react-native'
 import { useEffect, useState } from 'react'
 import * as FileSystem from 'expo-file-system/legacy'
+import { useNavigation } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useDownloads } from './downloads'
 import { getSchemePalette, SCHEMES, useTheme } from './theme'
@@ -27,14 +27,14 @@ function formatBytes(bytes) {
   return `${n.toFixed(n >= 10 || i === 0 ? 0 : 1)} ${units[i]}`
 }
 
-export function Settings({ visible, onClose }) {
+export function Settings() {
+  const navigation = useNavigation()
   const insets = useSafeAreaInsets()
   const { palette, mode, scheme, toggleMode, setScheme } = useTheme()
   const { totalSize, clearAll, downloadedCount } = useDownloads()
   const [disk, setDisk] = useState({ free: null, total: null })
 
   useEffect(() => {
-    if (!visible) return
     let cancelled = false
     ;(async () => {
       try {
@@ -50,7 +50,7 @@ export function Settings({ visible, onClose }) {
     return () => {
       cancelled = true
     }
-  }, [visible, totalSize])
+  }, [totalSize])
 
   function confirmClearAll() {
     if (totalSize === 0) return
@@ -89,32 +89,28 @@ export function Settings({ visible, onClose }) {
   }
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      onRequestClose={onClose}
-      statusBarTranslucent
-    >
-      <View style={[styles.root, { backgroundColor: palette.bg }]}>
-        <StatusBar
-          barStyle={palette.statusBarStyle}
-          backgroundColor="transparent"
-          translucent
-        />
-        <View style={{ height: insets.top, backgroundColor: palette.bg }} />
+    <View style={[styles.root, { backgroundColor: palette.bg }]}>
+      <StatusBar
+        barStyle={palette.statusBarStyle}
+        backgroundColor="transparent"
+        translucent
+      />
+      <View style={{ height: insets.top, backgroundColor: palette.bg }} />
 
-        <View
-          style={[styles.navbar, { borderBottomColor: palette.border }]}
+      <View style={[styles.navbar, { borderBottomColor: palette.border }]}>
+        <Pressable
+          onPress={() => navigation.goBack()}
+          hitSlop={8}
+          style={styles.navAction}
         >
-          <Pressable onPress={onClose} hitSlop={8} style={styles.navAction}>
-            <Text style={[styles.navActionText, { color: palette.accent }]}>
-              Done
-            </Text>
-          </Pressable>
-          <Text style={[styles.navTitle, { color: palette.text }]}>
-            Settings
+          <Text style={[styles.navActionText, { color: palette.accent }]}>
+            Done
           </Text>
-          <View style={styles.navAction} />
+        </Pressable>
+        <Text style={[styles.navTitle, { color: palette.text }]}>
+          Settings
+        </Text>
+        <View style={styles.navAction} />
         </View>
 
         <ScrollView
@@ -207,10 +203,9 @@ export function Settings({ visible, onClose }) {
                 </Text>
               </Row>
             </Pressable>
-          </Group>
-        </ScrollView>
-      </View>
-    </Modal>
+        </Group>
+      </ScrollView>
+    </View>
   )
 }
 
