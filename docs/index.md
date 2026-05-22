@@ -133,10 +133,104 @@ RNTP содержит нативный код, которого нет в Expo G
 
 ### Особенности конфигурации
 
-- `app.json` → `newArchEnabled: false`. RNTP v4.1.2 имеет баг в bridgeless-режиме (#2593), native→JS события не доходят, и кнопки с локскрина не работают. Отключение New Arch — обязательное условие.
-- `app.json` → `ios.infoPlist.UIBackgroundModes: ["audio"]` — без этого iOS убьёт звук при сворачивании.
+- Конфиг — динамический (`app.config.js`, не `app.json`), потому что от профиля сборки зависят `name` / `android.package` / `ios.bundleIdentifier` (см. App Variants ниже).
+- `newArchEnabled: false`. RNTP v4.1.2 имеет баг в bridgeless-режиме (#2593), native→JS события не доходят, и кнопки с локскрина не работают. Отключение New Arch — обязательное условие.
+- `ios.infoPlist.UIBackgroundModes: ["audio"]` — без этого iOS убьёт звук при сворачивании.
 - На Android `expo-build-properties` оставлен с `usesCleartextTraffic: true` (для http-стримов с локального backend), foreground service и медиа-разрешения подмерживаются из манифеста RNTP автоматически.
 - `patches/react-native-track-player@4.1.2.patch` — фикс двух мест в `MusicModule.kt`, где `Arguments.fromBundle()` ломается из-за `Bundle?` nullability в RN 0.81. Подключён через `pnpm-workspace.yaml` → `patchedDependencies`, применяется автоматически при `pnpm install`. При апгрейде RNTP патч может перестать применяться — проверять.
+
+### App Variants (dev / preview / prod рядом на одном устройстве)
+
+`app.config.js` читает переменную `APP_VARIANT` и подставляет суффикс в `android.package` и `ios.bundleIdentifier` + меняет отображаемое имя:
+
+| `APP_VARIANT` | name в лаунчере | package |
+|---|---|---|
+| `development` | Audio Player (Dev) | `com.videoplayer.mobile.dev` |
+| `preview` | Audio Player (Preview) | `com.videoplayer.mobile.preview` |
+| `production` (default) | Audio Player | `com.videoplayer.mobile` |
+
+Android и iOS идентифицируют установленное приложение по package/bundleId, поэтому три варианта живут на устройстве **одновременно** и не перетирают друг друга. `APP_VARIANT` задаётся в `env` каждого профиля в `eas.json` — облачные сборки EAS читают её автоматически, для локального запуска нужно передать её самому.
+
+EAS-проект (`projectId` в `extra.eas`) **один на все варианты** — это поддерживается из коробки.
+
+Если когда-то добавятся push-уведомления, Firebase, deep-link schemes, Google services — их нужно регистрировать **отдельно для каждого package** (Firebase, FCM, App Links и т.п. привязаны к package name).
+
+#### Keystore для dev-варианта
+
+Dev-вариант собирается с локальным keystore, чтобы не плодить ключи на EAS-сервере и не отвечать на интерактивные prompts при каждом ребилде. В `eas.json` у профиля `development` стоит `credentialsSource: local` → EAS читает `apps/mobile/credentials.json`, который указывает на `apps/mobile/credentials/keystore-dev.jks`.
+
+Оба файла (`credentials.json` с паролями и `credentials/`) в `.gitignore` — в репо не попадут. Если их нет (свежий клон, новая машина), сгенерировать заново:
+
+```bash
+cd apps/mobile
+mkdir -p credentials
+STORE_PASS=$(openssl rand -base64 18 | tr -d '/+=' | head -c 24)
+keytool -genkeypair -v \
+  -keystore credentials/keystore-dev.jks \
+  -keyalg RSA -keysize 2048 -validity 10000 \
+  -alias dev -storepass "$STORE_PASS" -keypass "$STORE_PASS" \
+  -dname "CN=VideoPlayer Dev, OU=Mobile, O=VideoPlayer, C=RU"
+cat > credentials.json <<EOF
+{
+  "android": {
+    "keystore": {
+      "keystorePath": "credentials/keystore-dev.jks",
+      "keystorePassword": "$STORE_PASS",
+      "keyAlias": "dev",
+      "keyPassword": "$STORE_PASS"
+    }
+  }
+}
+EOF
+```
+
+⚠️ Это **debug-keystore только для dev-APK** — он не годится для публикации в Google Play и не равен production-ключу. Каждая новая генерация даёт новую подпись, поэтому свежий dev-APK после ререгенерации keystore придётся **переустанавливать** (Android запрещает обновлять приложение другой подписью — нужно сначала снести старый dev-вариант с устройства).
+
+Production-вариант (`APP_VARIANT=production`) использует EAS Remote Credentials как раньше — ключ для Google Play хранится на EAS-сервере, локально его трогать не нужно.
+
+#### Сборка и установка APK
+
+**Dev-вариант (для ежедневной разработки):**
+```bash
+cd apps/mobile
+APP_VARIANT=development eas build --profile development -p android --local --output ./dev-client-dev.apk
+```
+Получается APK ~140 МБ с зашитым dev-launcher и нативными зависимостями. JS грузится с Metro.
+
+**Preview-вариант (зашитый JS, debug signing, для тестировщиков):**
+```bash
+APP_VARIANT=preview eas build --profile preview -p android --local --output ./preview.apk
+```
+
+**Production AAB (для Google Play):**
+```bash
+APP_VARIANT=production eas build --profile production -p android
+eas submit -p android
+```
+Production собирается на серверах EAS (нужны Remote Credentials и Google Play Console аккаунт).
+
+**Доставка APK на телефон.** Раньше работали через файл-менеджер; сейчас отлажена связка через Termux на телефоне:
+
+1. На телефоне: установить Termux (F-Droid), запустить `pkg install openssh && termux-setup-storage && sshd` (последнее — каждый раз при перезапуске телефона, иначе подключение `Connection refused`).
+2. На Mac: `scp -P 8022 ./dev-client-dev.apk u0_a347@<phone-ip>:~/storage/downloads/` (порт 8022 — дефолт Termux sshd, не 22).
+3. На телефоне открыть файл-менеджер → `Downloads/` → тап на APK → "Установить".
+
+IP телефона меняется при переподключении к WiFi (DHCP) — узнать актуальный через `Settings → About phone → Status` или `ip addr` в Termux. В `.claude/settings.local.json` правила прописаны на `192.168.0.*`, чтобы матчилась вся локалка.
+
+Альтернатива — USB + adb:
+```bash
+adb install -r ./dev-client-dev.apk
+```
+Требует включённого USB-debugging в Developer options.
+
+#### Когда нужна пересборка APK
+
+| Изменение | Нужен ли ребилд APK |
+|---|---|
+| JS/JSX код, стили, новые JS-зависимости | **нет** — Metro подхватит, hot reload работает |
+| Нативные библиотеки (`react-native-*` с native-кодом), плагины Expo, патчи в `patches/` | **да** |
+| `app.config.js`: `plugins`, `android.permissions`, новые иконки/splash, `bundleIdentifier`, `version` | **да** |
+| `eas.json`: `env` уровня профиля (например, новый `EXPO_PUBLIC_API_URL`) | **да** (env-переменные зашиваются в бандл во время сборки) |
 
 ### Подготовка окружения для Android
 
@@ -147,20 +241,6 @@ RNTP содержит нативный код, которого нет в Expo G
   export ANDROID_HOME="$HOME/Library/Android/sdk"
   export PATH="$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator"
   ```
-
-### Сборка dev-client (один раз)
-
-Локально на macOS (M-серия — быстрее облака):
-```bash
-cd apps/mobile
-eas build --profile development -p android --local --output ./dev-client.apk
-```
-Через облако EAS (если локальное окружение не настроено):
-```bash
-eas build --profile development -p android
-```
-
-APK ставится на телефон один раз. После этого пересборка нужна **только** при изменении нативных зависимостей или `app.json` (плагины, разрешения, новые библиотеки).
 
 ### Запуск разработки
 
@@ -182,19 +262,15 @@ IP должен указывать на машину с backend в той же W
 
 ### Профили в eas.json
 
-| Профиль | Что собирает | Когда нужен |
-|---------|--------------|-------------|
-| `development` | APK с dev-launcher, JS грузится с Metro | ежедневная разработка |
-| `preview` | APK с зашитым JS-бандлом, debug signing | передать тестировщику, проверить «как у пользователя» |
-| `production` | AAB с release signing | публикация в Google Play |
+| Профиль | Что собирает | Credentials | Когда нужен |
+|---------|--------------|-------------|-------------|
+| `development` | APK с dev-launcher, JS грузится с Metro | local (`credentials.json`) | ежедневная разработка |
+| `preview` | APK с зашитым JS-бандлом, debug signing | EAS remote | передать тестировщику, проверить «как у пользователя» |
+| `production` | AAB с release signing | EAS remote | публикация в Google Play |
 
-```bash
-eas build --profile preview -p android --local --output ./release.apk   # релизный APK
-eas build --profile production -p android                               # AAB для Play
-eas submit -p android                                                    # отправить в Play
-```
+Команды сборки и установки на устройство — в разделе **App Variants → Сборка и установка APK** выше.
 
-Перед публикацией — Google Play Console аккаунт ($25) и service account JSON для `eas submit`.
+Перед публикацией production — Google Play Console аккаунт ($25) и service account JSON для `eas submit`.
 
 ## Переменные окружения
 
