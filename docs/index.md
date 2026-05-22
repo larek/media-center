@@ -61,6 +61,7 @@ video-player/                # pnpm workspace
 |--------|----------|
 | [backend/](./backend/) | Архитектура сервера, API эндпоинты, работа с S3 |
 | [frontend/](./frontend/) | React компоненты, хуки, стилизация |
+| [spotify-downloader-api.md](./spotify-downloader-api.md) | Интеграция с RapidAPI Spotify Downloader (поиск + получение MP3) |
 
 ## Быстрый старт
 

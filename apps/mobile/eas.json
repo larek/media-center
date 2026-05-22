@@ -20,7 +20,7 @@
       },
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://192.168.0.106:3001/api"
+        "EXPO_PUBLIC_API_URL": "http://212.8.226.206:3001/api"
       }
     },
     "production": {
