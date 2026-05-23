@@ -35,6 +35,22 @@ export function createApiClient({ baseUrl = '/api' } = {}) {
     return url('/files/upload')
   }
 
+  async function botChat({ messages, model, temperature } = {}) {
+    const res = await fetch(url('/bot/chat'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages, model, temperature }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      const msg = data?.error || `botChat failed: ${res.status}`
+      const err = new Error(msg)
+      err.status = res.status
+      throw err
+    }
+    return data
+  }
+
   return {
     baseUrl,
     listTracks,
@@ -43,5 +59,6 @@ export function createApiClient({ baseUrl = '/api' } = {}) {
     streamUrl,
     uploadProgressUrl,
     uploadEndpoint,
+    botChat,
   }
 }

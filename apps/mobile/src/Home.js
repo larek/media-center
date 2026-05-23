@@ -10,6 +10,7 @@ import {
 } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { MessageCircle, Settings as SettingsIcon } from 'lucide-react-native'
 import TrackPlayer, { Event } from 'react-native-track-player'
 import { api } from './api'
 import { useDownloads } from './downloads'
@@ -117,13 +118,22 @@ export function Home() {
         <Text style={[styles.headerText, { color: palette.text }]}>
           Your Library
         </Text>
-        <Pressable
-          onPress={() => navigation.navigate('Settings')}
-          hitSlop={8}
-          style={styles.gearButton}
-        >
-          <Text style={[styles.gear, { color: palette.text }]}>⚙</Text>
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable
+            onPress={() => navigation.navigate('Bot')}
+            hitSlop={8}
+            style={styles.headerButton}
+          >
+            <MessageCircle size={24} color={palette.text} strokeWidth={2} />
+          </Pressable>
+          <Pressable
+            onPress={() => navigation.navigate('Settings')}
+            hitSlop={8}
+            style={styles.headerButton}
+          >
+            <SettingsIcon size={24} color={palette.text} strokeWidth={2} />
+          </Pressable>
+        </View>
       </View>
 
       <View style={[styles.searchWrap, { backgroundColor: palette.bgInput }]}>
@@ -182,8 +192,8 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: -0.5,
   },
-  gearButton: { padding: 4 },
-  gear: { fontSize: 24 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  headerButton: { padding: 4 },
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',

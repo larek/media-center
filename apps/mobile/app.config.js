@@ -36,6 +36,7 @@ module.exports = {
         backgroundColor: '#17212b',
       },
       edgeToEdgeEnabled: true,
+      softwareKeyboardLayoutMode: 'resize',
     },
     web: {
       favicon: './assets/favicon.png',

@@ -12,6 +12,7 @@ import { useEffect, useState } from 'react'
 import * as FileSystem from 'expo-file-system/legacy'
 import { useNavigation } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { Check } from 'lucide-react-native'
 import { useDownloads } from './downloads'
 import { getSchemePalette, SCHEMES, useTheme } from './theme'
 
@@ -151,7 +152,9 @@ export function Settings() {
                         {s.label}
                       </Text>
                     </View>
-                    {scheme === s.id ? <Check color={palette.accent} /> : null}
+                    {scheme === s.id ? (
+                      <Check size={20} color={palette.accent} strokeWidth={2.5} />
+                    ) : null}
                   </Row>
                 </Pressable>
               </View>
@@ -227,35 +230,6 @@ function Group({ children, palette }) {
 
 function Row({ children }) {
   return <View style={styles.row}>{children}</View>
-}
-
-function Check({ color, size = 18, thickness = 2 }) {
-  return (
-    <View style={{ width: size, height: size }}>
-      <View
-        style={{
-          position: 'absolute',
-          left: size * 0.132,
-          top: size * 0.583,
-          width: size * 0.236,
-          height: thickness,
-          backgroundColor: color,
-          transform: [{ rotate: '45deg' }],
-        }}
-      />
-      <View
-        style={{
-          position: 'absolute',
-          left: size * 0.230,
-          top: size * 0.417,
-          width: size * 0.707,
-          height: thickness,
-          backgroundColor: color,
-          transform: [{ rotate: '-45deg' }],
-        }}
-      />
-    </View>
-  )
 }
 
 const styles = StyleSheet.create({

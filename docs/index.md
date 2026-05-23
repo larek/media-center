@@ -11,6 +11,7 @@
 - Светлая и тёмная тема (web)
 - Drag & drop загрузка (web)
 - Фоновое воспроизведение и управление с локскрина / шторки уведомлений (mobile)
+- Bot-помощник (mobile): стриминговый чат с GPT через AiTunnel, function calling над собственной библиотекой — отвечает на вопросы и запускает треки по запросу (см. [bot.md](./bot.md))
 
 ## Структура проекта
 
@@ -22,11 +23,13 @@ video-player/                # pnpm workspace
 │   │   ├── index.html
 │   │   ├── vite.config.js
 │   │   └── package.json
-│   └── mobile/              # React Native (Expo SDK 54) — только воспроизведение
+│   └── mobile/              # React Native (Expo SDK 54) — воспроизведение + AI-чат
 │       ├── src/
-│       │   ├── api.js
+│       │   ├── api.js                 # createApiClient + streamBotChat (через expo/fetch)
+│       │   ├── Home.js                # экран библиотеки: список + плеер
 │       │   ├── Player.js              # UI плеера на хуках RNTP, прижат к нижнему insets
 │       │   ├── TrackList.js           # FlatList треков + кнопка download/прогресс/удалить
+│       │   ├── Bot.js                 # AI-чат: стриминг, placeholder bubble, play_tracks action
 │       │   ├── Settings.js            # Apple-style settings modal (theme + scheme)
 │       │   ├── theme.js               # ThemeProvider + 6 schemes × 2 modes (light/dark)
 │       │   ├── downloads.js           # DownloadsProvider — createDownloadResumable + сканер локальной папки
@@ -61,7 +64,9 @@ video-player/                # pnpm workspace
 |--------|----------|
 | [backend/](./backend/) | Архитектура сервера, API эндпоинты, работа с S3 |
 | [frontend/](./frontend/) | React компоненты, хуки, стилизация |
+| [bot.md](./bot.md) | AI-чат: AiTunnel + function calling (RAG над библиотекой), SSE-протокол, добавление новых tools |
 | [spotify-downloader-api.md](./spotify-downloader-api.md) | Интеграция с RapidAPI Spotify Downloader (поиск + получение MP3) |
+| [deploy.md](./deploy.md) | Деплой backend на VPS (rsync + pm2), управление прод-`.env`, проверка после деплоя |
 
 ## Быстрый старт
 
@@ -287,3 +292,6 @@ IP должен указывать на машину с backend в той же W
 | `POSTGRES_DB` | Имя базы данных |
 | `POSTGRES_USER` | Пользователь PostgreSQL |
 | `POSTGRES_PASSWORD` | Пароль PostgreSQL |
+| `AITUNNEL_API_KEY` | Ключ AiTunnel для Bot-фичи (см. [bot.md](./bot.md)) |
+| `AITUNNEL_MODEL` | Модель по умолчанию (`gpt-4o-mini`, `deepseek-v3.2`, …) |
+| `AITUNNEL_BASE_URL` | URL endpoint (по умолчанию `https://api.aitunnel.ru/v1`) |

@@ -8,6 +8,7 @@ import {
   Text,
   View,
 } from 'react-native'
+import { AlertCircle, Check, Download } from 'lucide-react-native'
 import { api } from './api'
 import { useDownloads } from './downloads'
 import { useTheme } from './theme'
@@ -85,11 +86,6 @@ export function TrackList({ tracks, currentTrack, onSelect }) {
                 </Text>
               ) : null}
             </View>
-            {active ? (
-              <Text style={[styles.activeMark, { color: palette.accent }]}>
-                ♪
-              </Text>
-            ) : null}
             <DownloadButton
               state={dl}
               palette={palette}
@@ -144,7 +140,7 @@ function DownloadButton({ state, palette, onPress }) {
   if (!state) {
     return (
       <Pressable onPress={onPress} hitSlop={6} style={styles.dlButton}>
-        <DownIcon color={palette.textMuted} />
+        <Download size={20} color={palette.textMuted} strokeWidth={2} />
       </Pressable>
     )
   }
@@ -163,7 +159,7 @@ function DownloadButton({ state, palette, onPress }) {
         <View
           style={[styles.dlDoneCircle, { backgroundColor: palette.accent }]}
         >
-          <DownIcon color={palette.accentText} size={12} thickness={2} />
+          <Check size={14} color={palette.accentText} strokeWidth={3} />
         </View>
       </Pressable>
     )
@@ -171,48 +167,11 @@ function DownloadButton({ state, palette, onPress }) {
   if (state.status === 'error') {
     return (
       <Pressable onPress={onPress} hitSlop={6} style={styles.dlButton}>
-        <Text style={styles.dlError}>!</Text>
+        <AlertCircle size={20} color="#E03131" strokeWidth={2} />
       </Pressable>
     )
   }
   return null
-}
-
-function DownIcon({ color, size = 18, thickness = 1.8 }) {
-  return (
-    <View style={{ width: size, height: size, alignItems: 'center' }}>
-      <View
-        style={{
-          width: thickness,
-          height: size * 0.65,
-          backgroundColor: color,
-          marginTop: size * 0.05,
-        }}
-      />
-      <View
-        style={{
-          position: 'absolute',
-          top: size * 0.45,
-          left: size * 0.18,
-          width: size * 0.4,
-          height: thickness,
-          backgroundColor: color,
-          transform: [{ rotate: '45deg' }],
-        }}
-      />
-      <View
-        style={{
-          position: 'absolute',
-          top: size * 0.45,
-          left: size * 0.42,
-          width: size * 0.4,
-          height: thickness,
-          backgroundColor: color,
-          transform: [{ rotate: '-45deg' }],
-        }}
-      />
-    </View>
-  )
 }
 
 const styles = StyleSheet.create({
@@ -238,7 +197,6 @@ const styles = StyleSheet.create({
   rowInfo: { flex: 1, minWidth: 0 },
   title: { fontSize: 16, fontWeight: '500' },
   artist: { fontSize: 13, marginTop: 2 },
-  activeMark: { fontSize: 18, marginLeft: 12, fontWeight: '700' },
   dlButton: {
     marginLeft: 12,
     width: 44,
@@ -253,7 +211,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dlError: { color: '#E03131', fontSize: 18, fontWeight: '700' },
   fillContainer: {
     position: 'absolute',
     top: 0,

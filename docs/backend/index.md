@@ -17,7 +17,9 @@ server/
 │       └── 02_create_tracks.js   # Таблица треков
 ├── repository/
 │   ├── artists.js        # CRUD операции для artists
-│   └── tracks.js         # CRUD операции для tracks
+│   └── tracks.js         # CRUD + searchTracks / getLibraryStats / getTracksByIds (для Bot)
+├── bot/                  # Не-роутный код Bot-фичи (LLM tools)
+│   └── tools.js          # toolSchemas (для LLM) + toolImpls (JS-реализации)
 └── controllers/
     ├── files/
     │   ├── list.js            # Список файлов в S3
@@ -26,12 +28,16 @@ server/
     │   ├── stream.js          # Стриминг с Range support
     │   ├── rename.js          # Переименование в S3 (устаревший)
     │   └── delete.js          # Удаление из S3 (устаревший)
-    └── tracks/
-        ├── list.js       # Список треков из БД
-        ├── create.js     # Создание трека
-        ├── update.js     # Обновление трека (название, артист)
-        └── delete.js     # Удаление трека (БД + S3)
+    ├── tracks/
+    │   ├── list.js       # Список треков из БД
+    │   ├── create.js     # Создание трека
+    │   ├── update.js     # Обновление трека (название, артист)
+    │   └── delete.js     # Удаление трека (БД + S3)
+    └── bot/
+        └── chat.js       # POST /api/bot/chat — AiTunnel proxy + tool-loop, SSE-ответ
 ```
+
+⚠️ **Утилитные модули, не являющиеся обработчиками роутов, должны лежать ВНЕ `controllers/`.** Динамический загрузчик регистрирует каждый `.js` файл в `controllers/<dir>/` как роут и требует `export default function(req, res)`. Поэтому tools для Bot живут в `server/bot/tools.js`, а не в `server/controllers/bot/tools.js` — иначе сервер падает на старте с `TypeError: argument handler must be a function`.
 
 ## Динамический роутинг
 
@@ -245,6 +251,35 @@ Content-Range: bytes 0-1000000/5242880
 }
 ```
 
+### POST /api/bot/chat
+
+AI-чат с function calling над библиотекой треков. Прокси к AiTunnel (OpenAI-совместимый API). Полное описание поведения, tool-loop и SSE-протокола — в [../bot.md](../bot.md).
+
+**Request:**
+```json
+{
+  "messages": [{ "role": "user", "content": "Включи Billie Jean" }],
+  "model": "gpt-4o-mini",      // опционально, default — из AITUNNEL_MODEL
+  "temperature": 0.7            // опционально
+}
+```
+
+**Response:** Server-Sent Events stream (`text/event-stream`)
+
+```
+data: {"action":{"type":"play_tracks","tracks":[{"id":11,"name":"Algorithm","artist":"Muse","s3_key":"..."}]}}
+
+data: {"choices":[{"delta":{"content":"Включаю Algorithm и Psycho от Muse."}}]}
+
+data: [DONE]
+```
+
+Перед текстом могут прийти 0 или больше `action`-событий (если LLM вызвала `play_tracks`). Клиент диспетчит actions немедленно (запуск воспроизведения), затем рендерит текст.
+
+**Лимиты:** до 50 сообщений в истории, до 8000 символов в одном сообщении, до 5 tool-rounds на запрос. Превышение → 400.
+
+**Требует env:** `AITUNNEL_API_KEY` (без него — 503).
+
 ## База данных
 
 ### PostgreSQL
@@ -305,9 +340,12 @@ pnpm run migrate:down
 |---------|----------|
 | `getAllTracks()` | Получить все треки (с JOIN на artists) |
 | `getTrackById(id)` | Получить трек по ID |
+| `getTracksByIds(ids)` | Получить треки по массиву ID (для Bot `play_tracks`) |
 | `createTrack({ name, artist_id, s3_key })` | Создать трек |
 | `updateTrack(id, { name, artist_id })` | Обновить трек |
 | `deleteTrack(id)` | Удалить трек |
+| `searchTracks(query, limit)` | ILIKE-поиск по name / artist / album с ранжированием (для Bot `search_tracks`) |
+| `getLibraryStats()` | `{ tracks_count, artists_count, top_artists: [...] }` (для Bot `get_library_stats`) |
 
 ## S3 Клиент
 

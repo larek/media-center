@@ -7,6 +7,7 @@ import {
   NavigationContainer,
 } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
+import { Bot } from './src/Bot'
 import { Home } from './src/Home'
 import { Settings } from './src/Settings'
 import { useTheme } from './src/theme'
@@ -44,6 +45,11 @@ export default function App() {
           name="Settings"
           component={Settings}
           options={{ animation: 'slide_from_bottom' }}
+        />
+        <Stack.Screen
+          name="Bot"
+          component={Bot}
+          options={{ animation: 'slide_from_right' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

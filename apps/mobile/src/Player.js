@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pause, Play, SkipBack, SkipForward } from 'lucide-react-native'
 import TrackPlayer, {
   State,
   useActiveTrack,
@@ -79,7 +80,12 @@ export function Player({ bottomInset = 0 }) {
           style={[styles.sideButton, !hasTrack && styles.disabled]}
           hitSlop={8}
         >
-          <Text style={[styles.sideIcon, { color: palette.text }]}>⏮</Text>
+          <SkipBack
+            size={28}
+            color={palette.text}
+            fill={palette.text}
+            strokeWidth={1.5}
+          />
         </Pressable>
         <Pressable
           onPress={() => (isPlaying ? TrackPlayer.pause() : TrackPlayer.play())}
@@ -91,9 +97,22 @@ export function Player({ bottomInset = 0 }) {
             },
           ]}
         >
-          <Text style={[styles.playIcon, { color: palette.playIcon }]}>
-            {isPlaying ? '❚❚' : '▶'}
-          </Text>
+          {isPlaying ? (
+            <Pause
+              size={22}
+              color={palette.playIcon}
+              fill={palette.playIcon}
+              strokeWidth={0}
+            />
+          ) : (
+            <Play
+              size={22}
+              color={palette.playIcon}
+              fill={palette.playIcon}
+              strokeWidth={0}
+              style={{ marginLeft: 2 }}
+            />
+          )}
         </Pressable>
         <Pressable
           onPress={() => TrackPlayer.skipToNext()}
@@ -101,7 +120,12 @@ export function Player({ bottomInset = 0 }) {
           style={[styles.sideButton, !hasTrack && styles.disabled]}
           hitSlop={8}
         >
-          <Text style={[styles.sideIcon, { color: palette.text }]}>⏭</Text>
+          <SkipForward
+            size={28}
+            color={palette.text}
+            fill={palette.text}
+            strokeWidth={1.5}
+          />
         </Pressable>
       </View>
     </View>
@@ -153,7 +177,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sideIcon: { fontSize: 24 },
   disabled: { opacity: 0.3 },
   playButton: {
     width: 56,
@@ -162,5 +185,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  playIcon: { fontSize: 18, fontWeight: '900' },
 })
